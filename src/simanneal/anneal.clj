@@ -2,7 +2,8 @@
   (:gen-class))
 
 (defn make-temperature-seq
-  "produce an exponential cooling schedule"
+  "produce an exponential cooling schedule
+  from tmax to tmix"
   [tmax tmin steps]
   (let [tfactor (* -1 (Math/log (/ tmax tmin)))]
     (for [step (range steps)]

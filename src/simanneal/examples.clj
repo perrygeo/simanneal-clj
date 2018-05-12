@@ -55,22 +55,12 @@
 ; Simulating nodes of a graph for which we'll calculate
 ; the shortest tour visiting all points
 
+;; Domain-specific functions
+
 (defn random-point
   "Random 2D point vector"
   []
   [(rand) (rand)])
-
-(def initial-state
-  (into []
-        ; Vector of 2D point vectors.
-        (take 49 (repeatedly random-point))))
-
-(defn move
-  "Return a new tour with a small modification"
-  [tour]
-  (let [point1 (rand-int (count tour))
-        point2 (rand-int (count tour))]
-    (switch-elements tour point1 point2)))
 
 (defn distance
   "Take two 2D point vectors and calculate euclidean distance"
@@ -79,14 +69,25 @@
         dy (- y2 y1)]
     (Math/sqrt (+ (* dx dx) (* dy dy)))))
 
+;; Annealing inputs
+
+(def initial-state
+  (into [] (take 50 (repeatedly random-point))))
+
+(defn move
+  "Return a new tour with a small random modification"
+  [tour]
+  (let [idx1 (rand-int (count tour))
+        idx2 (rand-int (count tour))]
+    (switch-elements tour idx1 idx2)))
+
 (defn score
-  "Given the state, calculate how well it meets the objective.
-  Lowest score is best; minimize
-  Calculate the total distance along the route"
+  "Calculate the total distance of the tour.
+  Lowest score is best; minimize"
   [tour]
   (reduce
    + (for [[pt1 pt2] (partition 2 1 tour)]
        (distance pt1 pt2))))
 
 (def temps
-  (make-temperature-seq 25.0 0.1 500000))
+  (make-temperature-seq 25.0 0.1 50000))
