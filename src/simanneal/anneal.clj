@@ -46,6 +46,29 @@
           (reset! state proposed))))
     @state))
 
+;; TODO
+(defn run-sa2
+  "Attempts to optimize run-sa. WIP"
+  [initial-state
+   create-move-fn
+   score-fn
+   temperature-seq]
+
+  (let [state (atom initial-state)]
+    (doseq [temp temperature-seq]
+      (let [;; memoize makes it slower by 10%
+            ;; score (memoize score-fn)
+            prev-score (score-fn @state)
+            proposed-move-fn (create-move-fn @state)
+            score (score-fn (proposed-move-fn @state))
+            dE (- score prev-score)]
+        (if (or
+             (< dE 0)
+             (> (Math/exp (/ (* -1 dE) temp)) (rand)))
+          ;; Swapping seem marginally SLOWER than resetting
+          (swap! state proposed-move-fn))))
+    @state))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; demo
 ;;
@@ -54,7 +77,6 @@
 ;; Not useful but easy to debug
 
 (comment
-  (def initial-state (into [] (range 20)))
 
   (defn move
     "Return a new state with a small modification"
@@ -62,6 +84,15 @@
     (let [idx1 (rand-int (count state))
           idx2 (rand-int (count state))]
       (switch-elements state idx1 idx2)))
+
+  (defn create-random-move
+    "Return a function which closes over randomness.
+    Fn creates new state with a small modification."
+    [current-state]
+    (let [idx1 (rand-int (count current-state))
+          idx2 (rand-int (count current-state))]
+      (fn [state]
+        (switch-elements state idx1 idx2))))
 
   (defn score
     "Given the state, calculate how well it meets the objective.
@@ -71,5 +102,7 @@
     [state]
     (* -1 (r/fold + (first-half state))))
 
-  (let [temp-seq (make-temperature-seq 20 1 5000)]
-    (run-sa initial-state move score temp-seq)))
+  (let [temp-seq (make-temperature-seq 25000 1 125000)
+        initial-state (into [] (range 30))]
+    (time (println (run-sa2 initial-state create-random-move score temp-seq)))
+    (time (println (run-sa initial-state move score temp-seq)))))
