@@ -32,8 +32,7 @@
   [initial-state
    move-fn
    score-fn
-   temperature-seq
-   & {:keys [in-ch out-ch]}]
+   temperature-seq]
 
   (let [state (atom initial-state)]
     (doseq [temp temperature-seq]
@@ -72,5 +71,5 @@
     [state]
     (* -1 (r/fold + (first-half state))))
 
-  (let [temp-seq (make-temperature-seq 25 1 5000)]
+  (let [temp-seq (make-temperature-seq 20 1 5000)]
     (run-sa initial-state move score temp-seq)))
