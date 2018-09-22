@@ -100,7 +100,7 @@ TODO explain the art of developing a temperature schedule.
  ...)
 ```
 
-#### 4. Run simulated annealing
+#### 5. Run simulated annealing
 
 The `run-sa` function in the `simanneal.anneal` namespace is the main entry point.
 
