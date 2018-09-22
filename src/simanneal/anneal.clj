@@ -1,7 +1,6 @@
 (ns simanneal.anneal
   (:require [clojure.core.async :as async]
-            [clojure.core.reducers :as r]
-            [simanneal.examples :refer [switch-elements first-half]]))
+            [clojure.core.reducers :as r]))
 
 (defn make-temperature-seq
   "produce an exponential cooling schedule
@@ -13,15 +12,6 @@
         tmax
         (* tmax (Math/exp (* tfactor (/ step (dec steps)))))))))
 
-(comment
-  ;; pay no attention
-  (def temps
-    (make-temperature-seq 25.0 0.1 50000))
-  (defn handler [request]
-    (let [{{:keys [database email]} :services} request]))
-  (+ x 1)
-  (make-temperature-seq 500 1 3))
-
 (defn run-sa
   "Run simulated annealing.
   Repeatedly move-fn on the state, creating new states.
@@ -29,6 +19,7 @@
   - The proposed solution scores better
   - The proposed solution scores worse but within range
     defined by the delta, the temperature and some randomness"
+
   [initial-state
    move-fn
    score-fn
@@ -46,37 +37,17 @@
           (reset! state proposed))))
     @state))
 
-;; TODO
-(defn run-sa2
-  "Attempts to optimize run-sa. WIP"
-  [initial-state
-   create-move-fn
-   score-fn
-   temperature-seq]
-
-  (let [state (atom initial-state)]
-    (doseq [temp temperature-seq]
-      (let [;; memoize makes it slower by 10%
-            ;; score (memoize score-fn)
-            prev-score (score-fn @state)
-            proposed-move-fn (create-move-fn @state)
-            score (score-fn (proposed-move-fn @state))
-            dE (- score prev-score)]
-        (if (or
-             (< dE 0)
-             (> (Math/exp (/ (* -1 dE) temp)) (rand)))
-          ;; Swapping seem marginally SLOWER than resetting
-          (swap! state proposed-move-fn))))
-    @state))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; demo
-;;
-;; sort bigger things into the first half of the vector
-;;
+;; world's worst sorting algorithm
 ;; Not useful but easy to debug
 
 (comment
+
+  (defn switch-elements
+    "Switch 2 elements in a vector by index"
+    [v i1 i2]
+    (assoc v i2 (v i1) i1 (v i2)))
 
   (defn move
     "Return a new state with a small modification"
@@ -85,24 +56,16 @@
           idx2 (rand-int (count state))]
       (switch-elements state idx1 idx2)))
 
-  (defn create-random-move
-    "Return a function which closes over randomness.
-    Fn creates new state with a small modification."
-    [current-state]
-    (let [idx1 (rand-int (count current-state))
-          idx2 (rand-int (count current-state))]
-      (fn [state]
-        (switch-elements state idx1 idx2))))
-
   (defn score
-    "Given the state, calculate how well it meets the objective.
-    Lowest score is best; minimize
-    In this case, take the negative sum of the first half
-    ie encourage greater values to sort forward"
+    "weight numbers by order.
+    Higher numbers penalized more at the end of the vector =
+    effectively a reverse sort"
     [state]
-    (* -1 (r/fold + (first-half state))))
+    (let [indexes (range 1 (+ 1 (count state)))
+          weighted-scores (map * indexes state)]
+      (reduce + weighted-scores)))
 
-  (let [temp-seq (make-temperature-seq 25000 1 125000)
-        initial-state (into [] (range 30))]
-    (time (println (run-sa2 initial-state create-random-move score temp-seq)))
-    (time (println (run-sa initial-state move score temp-seq)))))
+  (run-sa (into [] (range 10))
+          move
+          score
+          (make-temperature-seq 1.5 0.1 5000)))
